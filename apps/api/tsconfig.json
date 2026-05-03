@@ -13,8 +13,8 @@
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
-    "moduleResolution": "bundler",
-    "ignoreDeprecations": "6.0",
+    "moduleResolution": "node",
+    "types": ["node"],
     "paths": {
       "@/*": ["./src/*"]
     }
