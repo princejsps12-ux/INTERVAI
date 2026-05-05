@@ -17,8 +17,13 @@ const PORT = process.env.PORT || 4000;
 
 // Security & parsing middleware
 app.use(helmet());
+const corsOrigins = (process.env.CORS_ORIGIN || 'http://localhost:3000,http://localhost:3001')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+  origin: corsOrigins,
   credentials: true,
 }));
 app.use(morgan('dev'));
