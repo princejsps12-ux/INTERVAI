@@ -7,6 +7,13 @@ import { Button } from '@/components/ui/button';
 type FeedbackLevel = 'good' | 'warn' | 'bad';
 type Feedback = { level: FeedbackLevel; messages: string[] };
 
+// Returns whichever of the two levels is "worse" (bad > warn > good).
+// Defined outside the analyze loop so TS doesn't narrow `current` via flow analysis.
+function worsen(current: FeedbackLevel, candidate: FeedbackLevel): FeedbackLevel {
+  const rank: Record<FeedbackLevel, number> = { good: 0, warn: 1, bad: 2 };
+  return rank[candidate] > rank[current] ? candidate : current;
+}
+
 const POSE_MODEL_URL =
   'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/latest/pose_landmarker_lite.task';
 const WASM_URL = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.35/wasm';
@@ -139,31 +146,31 @@ export function CameraMonitor() {
             const shoulderWidth = Math.abs((lShoulder?.x ?? 0) - (rShoulder?.x ?? 0));
             if (shoulderWidth > 0 && shoulderWidth < 0.2) {
               messages.push('Move closer to the camera');
-              level = level === 'bad' ? 'bad' : 'warn';
+              level = worsen(level, 'warn');
             } else if (shoulderWidth > 0.65) {
               messages.push('Move back from the camera');
-              level = level === 'bad' ? 'bad' : 'warn';
+              level = worsen(level, 'warn');
             }
 
             // Posture — shoulder tilt
             const shoulderTilt = Math.abs((lShoulder?.y ?? 0) - (rShoulder?.y ?? 0));
             if (shoulderTilt > 0.06) {
               messages.push('Sit up straight — shoulders are uneven');
-              level = level === 'bad' ? 'bad' : 'warn';
+              level = worsen(level, 'warn');
             }
 
             // Head tilt — eyes should be near horizontal
             const eyeTilt = Math.abs((lEye?.y ?? 0) - (rEye?.y ?? 0));
             if (eyeTilt > 0.04) {
               messages.push('Keep your head upright');
-              level = level === 'bad' ? 'bad' : 'warn';
+              level = worsen(level, 'warn');
             }
 
             // Slouching — nose should be well above shoulders
             const shoulderY = ((lShoulder?.y ?? 0) + (rShoulder?.y ?? 0)) / 2;
             if (shoulderY > 0 && nose?.y && (shoulderY - nose.y) < 0.12) {
               messages.push('Lift your chin — try not to slouch');
-              level = level === 'bad' ? 'bad' : 'warn';
+              level = worsen(level, 'warn');
             }
           }
 
@@ -172,10 +179,10 @@ export function CameraMonitor() {
             const brightness = sampleBrightness(v, brightnessCanvasRef.current);
             if (brightness < 55) {
               messages.push('Increase lighting — too dark');
-              level = level === 'good' ? 'warn' : level;
+              level = worsen(level, 'warn');
             } else if (brightness > 220) {
               messages.push('Reduce backlight — overexposed');
-              level = level === 'good' ? 'warn' : level;
+              level = worsen(level, 'warn');
             }
           } catch { /* noop */ }
 
