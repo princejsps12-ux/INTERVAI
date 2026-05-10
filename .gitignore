@@ -40,9 +40,8 @@ Thumbs.db
 *.swp
 *.swo
 
-# Claude Code internal state
-.claude/worktrees/
-.claude/settings.local.json
+# Claude Code internal state (entire dir)
+.claude/
 
 # Compiled JS from TypeScript sources (we ship .ts, not .js)
 backend/src/**/*.js
