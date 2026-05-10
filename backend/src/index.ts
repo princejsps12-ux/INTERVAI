@@ -9,6 +9,7 @@ import { authRouter } from './routes/auth';
 import { interviewRouter } from './routes/interviews';
 import { evaluationRouter } from './routes/evaluations';
 import { userRouter } from './routes/users';
+import { audioRouter } from './routes/audio';
 import { errorHandler } from './middleware/errorHandler';
 import { notFound } from './middleware/notFound';
 
@@ -49,6 +50,7 @@ app.use('/api/auth', authRouter);
 app.use('/api/interviews', interviewRouter);
 app.use('/api/evaluations', evaluationRouter);
 app.use('/api/users', userRouter);
+app.use('/api/audio', audioRouter);
 
 // Error handling
 app.use(notFound);
