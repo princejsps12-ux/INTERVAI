@@ -324,6 +324,93 @@ npx prisma generate       # Regenerate Prisma client
 
 ---
 
+## ☁️ Deployment
+
+InterVAI is designed to deploy as **two separate services**:
+
+| Service | Recommended platform | Why |
+|---|---|---|
+| Frontend (Next.js) | **Vercel** | Auto-detects Next.js, free hobby tier, optimized CDN |
+| Backend (Express + Prisma) | **Render** | Free web service + free Postgres in one place, native Node support |
+| Database (Postgres) | **Render** (or Neon/Supabase) | Free tier included with Render |
+
+### 1️⃣ Deploy backend on Render
+
+The repo includes a `render.yaml` blueprint — Render reads it automatically.
+
+1. Sign up at [render.com](https://render.com) → **New** → **Blueprint**
+2. Connect your GitHub and select `princejsps12-ux/INTERVAI`
+3. Render will create:
+   - A **PostgreSQL database** (`intervai-db`, free tier)
+   - A **Web Service** (`intervai-backend`) wired to that database
+   - `JWT_SECRET` is auto-generated, `DATABASE_URL` is auto-injected
+4. Set the two `sync: false` env vars manually in the dashboard:
+   - `OPENAI_API_KEY` → your Groq key (`gsk_…`)
+   - `CORS_ORIGIN` → leave blank for now (you'll set it after the Vercel deploy)
+5. First deploy runs `npm install && npm run build --workspace=backend` (which generates the Prisma client), then `npm run start:migrate --workspace=backend` (which applies migrations + starts the server)
+6. When it's live, copy the URL — something like `https://intervai-backend.onrender.com`
+
+> 💤 The free Render plan **sleeps after 15 minutes of inactivity** (cold start ~30 seconds on first request). Upgrade to Starter ($7/mo) to keep it always-on.
+
+### 2️⃣ Deploy frontend on Vercel
+
+1. Sign up at [vercel.com](https://vercel.com) → **Add New** → **Project**
+2. Import the same `princejsps12-ux/INTERVAI` repo
+3. **Important monorepo settings:**
+   - **Root Directory:** `frontend`
+   - **Framework Preset:** Next.js (auto-detected)
+   - The included `frontend/vercel.json` handles install/build for the workspace
+4. Add environment variable:
+   - `NEXT_PUBLIC_API_URL` → your Render backend URL (e.g. `https://intervai-backend.onrender.com`)
+5. Deploy. Vercel gives you a URL like `https://intervai.vercel.app`
+
+### 3️⃣ Wire CORS (final step)
+
+Back in Render → your `intervai-backend` service → Environment:
+
+- Set `CORS_ORIGIN` = `https://intervai.vercel.app` (your actual Vercel URL)
+- If you have a preview branch deploys, use comma-separated values: `https://intervai.vercel.app,https://intervai-git-main-yourname.vercel.app`
+
+Render will auto-redeploy with the new CORS config.
+
+### ✅ Smoke test
+
+```bash
+# Backend health
+curl https://intervai-backend.onrender.com/health
+# → {"status":"ok",...}
+
+# Frontend loads
+open https://intervai.vercel.app
+
+# Try register/login → start interview → record voice → live posture coach
+```
+
+### Production env vars cheat-sheet
+
+**Render (backend):**
+
+| Key | Value |
+|---|---|
+| `NODE_ENV` | `production` |
+| `PORT` | `10000` (Render injects this) |
+| `DATABASE_URL` | auto from `intervai-db` |
+| `JWT_SECRET` | auto-generated |
+| `JWT_EXPIRES_IN` | `7d` |
+| `OPENAI_API_KEY` | your Groq key |
+| `OPENAI_BASE_URL` | `https://api.groq.com/openai/v1` |
+| `OPENAI_MODEL` | `llama-3.3-70b-versatile` |
+| `OPENAI_AUDIO_MODEL` | `whisper-large-v3` |
+| `CORS_ORIGIN` | your Vercel URL(s), comma-separated |
+
+**Vercel (frontend):**
+
+| Key | Value |
+|---|---|
+| `NEXT_PUBLIC_API_URL` | your Render backend URL |
+
+---
+
 ## 🐞 Troubleshooting
 
 | Symptom | Fix |
@@ -334,6 +421,11 @@ npx prisma generate       # Regenerate Prisma client
 | "Microphone access denied" alert | Browser blocked mic. Click the lock icon in the URL bar → Allow microphone |
 | Port 3001 already in use | Edit `frontend/package.json` `dev` script to use a different port, or stop the other process |
 | `Environment variable not found: DATABASE_URL` from Prisma | Prisma reads from `packages/database/.env` for migrations — create that file too |
+| Vercel build fails with "command not found" | Make sure **Root Directory** is set to `frontend` in Vercel project settings |
+| Render build fails on `prisma generate` | Make sure `DATABASE_URL` is set as an env var (or use the blueprint, which wires it automatically) |
+| Frontend can't reach backend in production | Check `CORS_ORIGIN` on Render includes your exact Vercel URL (with `https://`, no trailing slash); check `NEXT_PUBLIC_API_URL` on Vercel matches the Render URL |
+| Backend on Render takes 30s on first request | That's the free-tier cold start — upgrade to Starter to keep it warm, or accept the wait |
+| 502 from `/api/audio/transcribe` in production | Check your Groq API key is set in Render's env vars and you have remaining quota |
 
 ---
 
