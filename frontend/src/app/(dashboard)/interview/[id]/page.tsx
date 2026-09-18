@@ -149,13 +149,19 @@ export default function InterviewPage() {
       mr.ondataavailable = (e) => chunksRef.current.push(e.data);
       mr.onstop = async () => {
         stream.getTracks().forEach((t) => t.stop());
-        const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
-        if (blob.size === 0) return;
+        // Safari records audio/mp4, Firefox audio/ogg — label the upload with what was actually recorded
+        const mime = mr.mimeType || 'audio/webm';
+        const ext = mime.includes('mp4') ? 'mp4' : mime.includes('ogg') ? 'ogg' : 'webm';
+        const blob = new Blob(chunksRef.current, { type: mime });
+        if (blob.size === 0) {
+          setAnswerText((prev) => prev || '[No audio was captured — check your microphone and try again]');
+          return;
+        }
 
         setIsTranscribing(true);
         try {
           const form = new FormData();
-          form.append('audio', blob, 'answer.webm');
+          form.append('audio', blob, `answer.${ext}`);
           const { data } = await api.post('/api/audio/transcribe', form);
           const transcript = (data?.data?.text || '').trim();
           if (transcript) {
@@ -173,8 +179,15 @@ export default function InterviewPage() {
       };
       mr.start();
       setIsRecording(true);
-    } catch {
-      alert('Microphone access denied. Please allow microphone permissions in your browser.');
+    } catch (err) {
+      const name = (err as { name?: string })?.name;
+      alert(
+        name === 'NotAllowedError' || name === 'SecurityError'
+          ? 'Microphone access denied. Please allow microphone permissions in your browser.'
+          : name === 'NotFoundError'
+            ? 'No microphone was found. Connect one and try again.'
+            : `Could not start recording (${name || 'unknown error'}). Recording needs HTTPS and a browser with microphone support.`
+      );
     }
   };
 
