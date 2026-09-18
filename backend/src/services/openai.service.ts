@@ -2,10 +2,10 @@ import OpenAI from 'openai';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
-  baseURL: process.env.OPENAI_BASE_URL || undefined,
+  baseURL: process.env.OPENAI_BASE_URL || 'https://api.groq.com/openai/v1',
 });
 
-const MODEL = process.env.OPENAI_MODEL || 'gpt-4o';
+const MODEL = process.env.OPENAI_MODEL || 'openai/gpt-oss-120b';
 
 export interface GeneratedQuestion {
   text: string;
