@@ -10,7 +10,8 @@ services:
     plan: free
     rootDir: .
     buildCommand: npm install && npm run build --workspace=backend
-    startCommand: npm run start:migrate --workspace=backend
+    preDeployCommand: npm run migrate:deploy --workspace=packages/database
+    startCommand: npm start --workspace=backend
     healthCheckPath: /health
     envVars:
       - key: NODE_ENV
